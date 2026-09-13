@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+
+  timezone String
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  refreshTokens RefreshToken[]
+  goals         Goal[]
+  foodEntries   FoodEntry[]
+  weightLogs    WeightLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Goal {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  calorieTarget Decimal @map("calorie_target") @db.Decimal(12, 2)
+  proteinTarget Decimal @map("protein_target") @db.Decimal(12, 2)
+  carbsTarget   Decimal @map("carbs_target") @db.Decimal(12, 2)
+  fatTarget     Decimal @map("fat_target") @db.Decimal(12, 2)
+
+  weightGoal Decimal? @map("weight_goal") @db.Decimal(8, 3)
+
+  effectiveFrom DateTime  @map("effective_from") @db.Timestamptz
+  effectiveTo   DateTime? @map("effective_to") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, effectiveFrom])
+  @@map("goals")
+}
+
+model FoodEntry {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  foodName String   @map("food_name")
+  mealType MealType @map("meal_type")
+
+  eatenAt DateTime @map("eaten_at") @db.Timestamptz
+
+  quantity     Decimal      @db.Decimal(12, 3)
+  quantityUnit QuantityUnit @map("quantity_unit")
+
+  calories Decimal @db.Decimal(12, 2)
+  proteinG Decimal @map("protein_g") @db.Decimal(12, 2)
+  carbsG   Decimal @map("carbs_g") @db.Decimal(12, 2)
+  fatG     Decimal @map("fat_g") @db.Decimal(12, 2)
+
+  source        FoodEntrySource @default(MANUAL)
+  aiConfidence  Decimal?        @map("ai_confidence") @db.Decimal(5, 4)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  micronutrients FoodEntryNutrient[]
+
+  @@index([userId, eatenAt(sort: Desc)])
+  @@index([userId, mealType, eatenAt(sort: Desc)])
+  @@map("food_entries")
+}
+
+model Nutrient {
+  id       Int              @id @default(autoincrement())
+  code     String           @unique
+  name     String
+  unit     String
+  category NutrientCategory
+
+  foodEntries FoodEntryNutrient[]
+
+  @@map("nutrients")
+}
+
+model FoodEntryNutrient {
+  foodEntryId String  @map("food_entry_id")
+  nutrientId  Int     @map("nutrient_id")
+  amount      Decimal @db.Decimal(14, 4)
+
+  foodEntry FoodEntry @relation(fields: [foodEntryId], references: [id], onDelete: Cascade)
+  nutrient  Nutrient  @relation(fields: [nutrientId], references: [id], onDelete: Restrict)
+
+  @@id([foodEntryId, nutrientId])
+  @@map("food_entry_nutrients")
+}
+
+model WeightLog {
+  id       String  @id @default(uuid())
+  userId   String  @map("user_id")
+  weightKg Decimal @map("weight_kg") @db.Decimal(8, 3)
+
+  loggedAt DateTime @map("logged_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt(sort: Desc)])
+  @@map("weight_logs")
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum QuantityUnit {
+  GRAM
+  MILLILITER
+  PIECE
+  SERVING
+}
+
+enum FoodEntrySource {
+  MANUAL
+  AI_IMAGE
+}
+
+enum NutrientCategory {
+  VITAMIN
+  MINERAL
+}
