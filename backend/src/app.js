@@ -4,6 +4,7 @@ import cors from "cors";
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
+import reportRoutes from "./modules/report/report.routes.js";
 import weightLogRoutes from "./modules/weight-log/weight-log.routes.js";
 import goalRoutes from "./modules/goal/goal.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
@@ -41,7 +42,7 @@ app.use(
   goalRoutes
 );
 app.use("/api/v1/weight-logs", weightLogRoutes);
-
+app.use("/api/v1/reports", reportRoutes);
 // app.use("/api/v1/goals", goalRoutes);
 
 // app.use(

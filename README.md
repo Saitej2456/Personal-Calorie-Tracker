@@ -10,7 +10,7 @@ The project is being developed incrementally, with each major stage kept in a wo
 
 # Project Status
 
-**Current stage: Stage 3 — Goals & Weight Tracking**
+**Current stage: Stage 4 — Reports & Analytics**
 
 The following are currently implemented:
 
@@ -41,10 +41,14 @@ The following are currently implemented:
 * Weight Log pagination
 * Weight Log date/time filtering
 * User ownership enforcement for Goals and Weight Logs
+* Calorie reports
+* Daily macro reports
+* Daily micronutrient reports
+* Goal vs actual daily comparisons
+* Timezone-aware report date handling
 
 The following major features remain:
 
-* Reports & Analytics
 * Frontend
 * AI-powered nutrition extraction
 * Optional bonus features
@@ -83,11 +87,11 @@ Food entries should be filterable by date/time range and meal type.
 
 ### Reports & Analytics
 
-The application is intended to provide:
+The application provides:
 
-* Weekly calorie intake trends
-* Daily/weekly macro breakdowns
-* Micronutrient summaries
+* Daily calorie intake data suitable for weekly calorie trends
+* Daily macro breakdowns
+* Daily micronutrient summaries
 * Goal vs actual nutrition comparisons
 
 ### AI Nutrition Extraction
@@ -261,6 +265,12 @@ Personal-Calorie-Tracker/
 │       │   │   ├── goal.routes.js
 │       │   │   ├── goal.schema.js
 │       │   │   └── goal.service.js
+│       │   │
+│       │   ├── report/
+│       │   │   ├── report.controller.js
+│       │   │   ├── report.routes.js
+│       │   │   ├── report.schema.js
+│       │   │   └── report.service.js
 │       │   │
 │       │   └── weight-log/
 │       │       ├── weight-log.controller.js
@@ -561,7 +571,7 @@ Authentication establishes **who the user is**.
 
 Authorization establishes **which resources that user is allowed to access**.
 
-Food Entry, Goal, and Weight Log queries are always scoped by the authenticated user's ID.
+Food Entry, Goal, Weight Log, and Report queries are always scoped by the authenticated user's ID.
 
 This prevents users from accessing another user's private resources.
 
@@ -611,6 +621,8 @@ The lower boundary is inclusive and the upper boundary is exclusive.
 This avoids ambiguous end-of-day timestamps and handles timezone conversions cleanly.
 
 Historical timestamps are not rewritten if the user later changes their timezone. The stored timestamp remains the same instant; future date-based queries are interpreted using the user's current timezone.
+
+Report APIs use the same timezone-aware calendar-date interpretation.
 
 ---
 
@@ -1038,6 +1050,296 @@ Successful deletion returns:
 
 ---
 
+# Reports & Analytics API
+
+All report endpoints are protected by authentication.
+
+Reports are derived dynamically from Food Entries and Goals rather than being stored in a separate `Report` table.
+
+Report date ranges and calendar dates are interpreted using the authenticated user's stored IANA timezone.
+
+---
+
+## Calorie Report
+
+```http
+GET /api/v1/reports/calories?from=YYYY-MM-DD&to=YYYY-MM-DD
+```
+
+Returns daily calorie totals for the requested date range.
+
+The date range uses:
+
+```text
+[from, to)
+```
+
+Missing days are included with:
+
+```text
+calories = "0.00"
+```
+
+Example:
+
+```http
+GET /api/v1/reports/calories?from=2026-09-13&to=2026-09-16
+```
+
+Example response:
+
+```json
+{
+  "data": {
+    "from": "2026-09-13",
+    "to": "2026-09-16",
+    "days": [
+      {
+        "date": "2026-09-13",
+        "calories": "300.00"
+      },
+      {
+        "date": "2026-09-14",
+        "calories": "600.00"
+      },
+      {
+        "date": "2026-09-15",
+        "calories": "500.00"
+      }
+    ]
+  }
+}
+```
+
+The endpoint can be used by the frontend to construct weekly calorie intake trends.
+
+---
+
+## Macro Report
+
+```http
+GET /api/v1/reports/macros?from=YYYY-MM-DD&to=YYYY-MM-DD
+```
+
+Returns daily totals for:
+
+* Protein
+* Carbohydrates
+* Fat
+
+Example:
+
+```http
+GET /api/v1/reports/macros?from=2026-09-13&to=2026-09-16
+```
+
+Example response:
+
+```json
+{
+  "data": {
+    "from": "2026-09-13",
+    "to": "2026-09-16",
+    "days": [
+      {
+        "date": "2026-09-13",
+        "proteinG": "10.00",
+        "carbsG": "50.00",
+        "fatG": "8.00"
+      },
+      {
+        "date": "2026-09-14",
+        "proteinG": "35.00",
+        "carbsG": "70.00",
+        "fatG": "18.00"
+      },
+      {
+        "date": "2026-09-15",
+        "proteinG": "26.30",
+        "carbsG": "47.00",
+        "fatG": "35.30"
+      }
+    ]
+  }
+}
+```
+
+Missing days are returned with zero values for all three macros.
+
+---
+
+## Micronutrient Report
+
+```http
+GET /api/v1/reports/micronutrients?from=YYYY-MM-DD&to=YYYY-MM-DD
+```
+
+Returns daily micronutrient totals for nutrients that were recorded during each day.
+
+Each nutrient includes:
+
+* Nutrient code
+* Nutrient name
+* Unit
+* Amount
+
+Example:
+
+```http
+GET /api/v1/reports/micronutrients?from=2026-09-13&to=2026-09-16
+```
+
+Example response:
+
+```json
+{
+  "data": {
+    "from": "2026-09-13",
+    "to": "2026-09-16",
+    "days": [
+      {
+        "date": "2026-09-13",
+        "nutrients": [
+          {
+            "code": "CALCIUM",
+            "name": "Calcium",
+            "unit": "mg",
+            "amount": "50.00"
+          },
+          {
+            "code": "IRON",
+            "name": "Iron",
+            "unit": "mg",
+            "amount": "2.00"
+          }
+        ]
+      },
+      {
+        "date": "2026-09-14",
+        "nutrients": [
+          {
+            "code": "CALCIUM",
+            "name": "Calcium",
+            "unit": "mg",
+            "amount": "100.00"
+          },
+          {
+            "code": "IRON",
+            "name": "Iron",
+            "unit": "mg",
+            "amount": "3.00"
+          },
+          {
+            "code": "VITAMIN_C",
+            "name": "Vitamin C",
+            "unit": "mg",
+            "amount": "10.00"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+If no micronutrient records exist for a day, the response contains:
+
+```json
+{
+  "date": "2026-09-15",
+  "nutrients": []
+}
+```
+
+A missing nutrient record represents an **unknown/not-recorded value**, not zero.
+
+Micronutrients recorded by multiple Food Entries on the same day are aggregated by nutrient code.
+
+---
+
+## Goal vs Actual Report
+
+```http
+GET /api/v1/reports/goal-comparison?date=YYYY-MM-DD
+```
+
+Compares the nutrition actually consumed on a specific calendar date against the goal applicable to that date.
+
+The endpoint does **not** calculate cumulative progress from the beginning of a goal.
+
+Instead, it performs a date-specific comparison:
+
+```text
+Requested date
+      │
+      ├── Actual calories/macros for that date
+      │
+      └── Goal effective on that date
+```
+
+Goal periods use the existing half-open interval semantics:
+
+```text
+effectiveFrom <= date
+AND
+date < effectiveTo
+```
+
+An ongoing goal with `effectiveTo = null` remains applicable after its effective start.
+
+Example:
+
+```http
+GET /api/v1/reports/goal-comparison?date=2026-09-14
+```
+
+Example response:
+
+```json
+{
+  "data": {
+    "date": "2026-09-14",
+    "actual": {
+      "calories": "600.00",
+      "proteinG": "35.00",
+      "carbsG": "70.00",
+      "fatG": "18.00"
+    },
+    "goal": {
+      "id": "785b2993-ca95-446e-b033-75d64c8c1ec6",
+      "calorieTarget": "2100.00",
+      "proteinTarget": "160.00",
+      "carbsTarget": "250.00",
+      "fatTarget": "68.00",
+      "weightGoal": null,
+      "effectiveFrom": "2026-09-13T18:30:00.000Z",
+      "effectiveTo": null
+    }
+  }
+}
+```
+
+If no goal applies to the requested date:
+
+```json
+{
+  "data": {
+    "date": "2026-09-13",
+    "actual": {
+      "calories": "300.00",
+      "proteinG": "10.00",
+      "carbsG": "50.00",
+      "fatG": "8.00"
+    },
+    "goal": null
+  }
+}
+```
+
+Goal periods for the same user cannot overlap, so a requested date cannot have multiple applicable goals.
+
+---
+
 # Validation
 
 Request validation is implemented using **Zod**.
@@ -1060,6 +1362,8 @@ Validation covers:
 * Source/AI confidence invariants
 * Goal effective-period validation
 * Weight Log validation
+* Report date ranges
+* Report dates
 
 Invalid requests return a consistent error structure.
 
@@ -1143,6 +1447,8 @@ Pagination is currently implemented for:
 * Food Entry listing
 * Goal listing
 * Weight Log listing
+
+Report endpoints are analytical endpoints rather than list-history APIs and therefore do not use pagination.
 
 Food Entry listing returns:
 
@@ -1474,13 +1780,8 @@ modules/
 ├── auth/
 ├── food-entry/
 ├── goal/
+├── report/
 └── weight-log/
-```
-
-Future modules are expected to include areas such as:
-
-```text
-reports/
 ```
 
 Each feature can contain its own:
@@ -1489,7 +1790,7 @@ Each feature can contain its own:
 * Controllers
 * Services
 * Validation schemas
-* Mappers
+* Mappers where required
 
 ---
 
@@ -1498,6 +1799,8 @@ Each feature can contain its own:
 Authenticated users can only access resources belonging to themselves.
 
 Resource ownership is enforced using the authenticated user's ID rather than trusting a user ID supplied by the client.
+
+Reports also use the authenticated user's ID when querying Food Entries and Goals.
 
 ---
 
@@ -1520,6 +1823,7 @@ For example:
 * No speculative AI extraction entity
 * No speculative PDF import entity
 * No repository layer until the application actually benefits from one
+* No persisted Report table; reports are derived dynamically from application data
 
 Additional abstractions can be introduced when the corresponding features are implemented.
 
@@ -1607,20 +1911,37 @@ Implemented:
 
 ## Stage 4 — Reports & Analytics
 
-**Status: Next**
+**Status: Completed**
 
-Planned:
+Implemented:
 
-* Weekly calorie intake trends
-* Daily/weekly macro breakdown
-* Micronutrient summaries
-* Goal vs actual comparisons
+* Daily calorie reports
+* Daily macro reports
+* Daily micronutrient reports
+* Goal vs actual daily comparisons
+* Date-range validation
+* Timezone-aware report date handling
+* Calendar-day aggregation
+* Missing-day handling
+* Micronutrient aggregation
+* Goal effective-period selection
+* User ownership enforcement
+* Decimal precision preservation
+
+Available report APIs:
+
+```text
+GET /api/v1/reports/calories
+GET /api/v1/reports/macros
+GET /api/v1/reports/micronutrients
+GET /api/v1/reports/goal-comparison
+```
 
 ---
 
 ## Stage 5 — Frontend
 
-**Status: Planned**
+**Status: Next**
 
 Planned:
 
@@ -1687,6 +2008,8 @@ The following decisions are intentional MVP design choices:
 * Historical Food Entry nutrition is stored as a snapshot and is not dependent on a mutable food catalog.
 * Goal periods are represented using half-open intervals.
 * Goal periods belonging to the same user cannot overlap.
+* Goal vs actual reports compare a requested calendar date against the goal effective on that date.
+* Reports are derived dynamically and are not persisted as separate database entities.
 * User-owned resources are always scoped by the authenticated user's ID.
 * Additional database entities for AI or PDF import workflows will be introduced when those features are actually implemented.
 * The backend is designed to remain usable independently of the future frontend.
