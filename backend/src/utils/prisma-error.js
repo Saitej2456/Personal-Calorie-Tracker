@@ -18,6 +18,13 @@ export const mapPrismaError = (error) => {
           "RESOURCE_NOT_FOUND"
         );
 
+      case "P2039":
+        return new AppError(
+          "Goal period overlaps with an existing goal",
+          409,
+          "CONFLICT"
+        );
+
       default:
         return new AppError(
           "Database operation failed",

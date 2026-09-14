@@ -10,7 +10,7 @@ The project is being developed incrementally, with each major stage kept in a wo
 
 # Project Status
 
-**Current stage: Stage 2 — Complete Food Entry API**
+**Current stage: Stage 3 — Goals & Weight Tracking**
 
 The following are currently implemented:
 
@@ -24,17 +24,30 @@ The following are currently implemented:
 * User registration and login
 * JWT authentication
 * Argon2id password hashing
-* Protected, user-owned Food Entry API
+* Protected, user-owned APIs
 * Complete Food Entry CRUD
 * Food Entry pagination
-* Date-range filtering
-* Meal-type filtering
+* Food Entry date-range filtering
+* Food Entry meal-type filtering
 * Micronutrient support
 * Timezone-aware date filtering
 * Response mapping/DTO layer
 * Canonical nutrient seed data
+* Goal CRUD
+* Effective goal periods
+* Goal period overlap protection
+* Goal pagination
+* Weight Log CRUD
+* Weight Log pagination
+* Weight Log date/time filtering
+* User ownership enforcement for Goals and Weight Logs
 
-The frontend, goals, weight tracking, reports, and AI nutrition extraction will be implemented in later stages.
+The following major features remain:
+
+* Reports & Analytics
+* Frontend
+* AI-powered nutrition extraction
+* Optional bonus features
 
 ---
 
@@ -235,12 +248,26 @@ Personal-Calorie-Tracker/
 │       │   │   ├── auth.schema.js
 │       │   │   └── auth.service.js
 │       │   │
-│       │   └── food-entry/
-│       │       ├── food-entry.controller.js
-│       │       ├── food-entry.mapper.js
-│       │       ├── food-entry.routes.js
-│       │       ├── food-entry.schema.js
-│       │       └── food-entry.service.js
+│       │   ├── food-entry/
+│       │   │   ├── food-entry.controller.js
+│       │   │   ├── food-entry.mapper.js
+│       │   │   ├── food-entry.routes.js
+│       │   │   ├── food-entry.schema.js
+│       │   │   └── food-entry.service.js
+│       │   │
+│       │   ├── goal/
+│       │   │   ├── goal.controller.js
+│       │   │   ├── goal.mapper.js
+│       │   │   ├── goal.routes.js
+│       │   │   ├── goal.schema.js
+│       │   │   └── goal.service.js
+│       │   │
+│       │   └── weight-log/
+│       │       ├── weight-log.controller.js
+│       │       ├── weight-log.mapper.js
+│       │       ├── weight-log.routes.js
+│       │       ├── weight-log.schema.js
+│       │       └── weight-log.service.js
 │       │
 │       └── utils/
 │           ├── app-error.js
@@ -421,7 +448,9 @@ A missing micronutrient record means the nutrient value is **unknown/not recorde
 
 # Goals
 
-The database supports goals containing:
+Goals allow users to define nutritional and weight targets over an effective period.
+
+Each goal contains:
 
 * Daily calorie target
 * Protein target
@@ -431,9 +460,23 @@ The database supports goals containing:
 * Effective start time
 * Optional effective end time
 
+Goal periods use half-open interval semantics:
+
+```text
+[effectiveFrom, effectiveTo)
+```
+
+An `effectiveTo` value of `null` represents an ongoing goal.
+
 The database prevents overlapping goal periods for the same user.
 
-The Goals API will be implemented in a later stage.
+The API converts database constraint violations for overlapping periods into:
+
+```text
+409 CONFLICT
+```
+
+Goals are always scoped to the authenticated user.
 
 ---
 
@@ -450,7 +493,26 @@ Each record contains:
 
 The database enforces positive weight values.
 
-The Weight Log API will be implemented in a later stage.
+Weight Log operations are always scoped to the authenticated user.
+
+The API supports:
+
+* Creating weight logs
+* Listing weight logs
+* Getting a weight log by ID
+* Updating weight logs
+* Deleting weight logs
+* Pagination
+* Date/time range filtering
+
+Weight log listing uses deterministic ordering:
+
+```text
+loggedAt DESC
+id DESC
+```
+
+The `id` acts as a tie-breaker when multiple weight measurements have the same timestamp.
 
 ---
 
@@ -499,15 +561,9 @@ Authentication establishes **who the user is**.
 
 Authorization establishes **which resources that user is allowed to access**.
 
-Food Entry queries are always scoped by both:
+Food Entry, Goal, and Weight Log queries are always scoped by the authenticated user's ID.
 
-```text
-foodEntry.id
-AND
-authenticated user ID
-```
-
-This prevents users from accessing another user's Food Entries.
+This prevents users from accessing another user's private resources.
 
 A resource belonging to another user is treated the same as a nonexistent resource and returns:
 
@@ -766,6 +822,222 @@ Associated `FoodEntryNutrient` records are removed through the database's cascad
 
 ---
 
+# Goal API
+
+All Goal endpoints are protected by authentication.
+
+## Create Goal
+
+```http
+POST /api/v1/goals
+```
+
+Example:
+
+```json
+{
+  "calorieTarget": 2200,
+  "proteinTarget": 150,
+  "carbsTarget": 250,
+  "fatTarget": 70,
+  "weightGoal": 75,
+  "effectiveFrom": "2026-09-14T00:00:00+05:30",
+  "effectiveTo": null
+}
+```
+
+`weightGoal` is optional and may be `null`.
+
+`effectiveTo` is optional and may be `null` for an ongoing goal.
+
+Goal periods for the same user cannot overlap.
+
+---
+
+## List Goals
+
+```http
+GET /api/v1/goals
+```
+
+Supports page-based pagination.
+
+Example:
+
+```http
+GET /api/v1/goals?page=1&limit=20
+```
+
+Default pagination:
+
+```text
+page  = 1
+limit = 20
+```
+
+Maximum:
+
+```text
+limit = 100
+```
+
+Goals are ordered by:
+
+```text
+effectiveFrom DESC
+id DESC
+```
+
+---
+
+## Get Goal
+
+```http
+GET /api/v1/goals/:id
+```
+
+Returns a single goal belonging to the authenticated user.
+
+---
+
+## Update Goal
+
+```http
+PATCH /api/v1/goals/:id
+```
+
+Supports partial updates.
+
+Fields that are omitted remain unchanged.
+
+The service validates the resulting effective period, including:
+
+* `effectiveTo` must be after `effectiveFrom`
+* The resulting period must not overlap another goal belonging to the same user
+
+---
+
+## Delete Goal
+
+```http
+DELETE /api/v1/goals/:id
+```
+
+Deletes a Goal belonging to the authenticated user.
+
+Successful deletion returns:
+
+```text
+204 No Content
+```
+
+---
+
+# Weight Log API
+
+All Weight Log endpoints are protected by authentication.
+
+## Create Weight Log
+
+```http
+POST /api/v1/weight-logs
+```
+
+Example:
+
+```json
+{
+  "weightKg": 78.5,
+  "loggedAt": "2026-09-14T07:00:00+05:30"
+}
+```
+
+---
+
+## List Weight Logs
+
+```http
+GET /api/v1/weight-logs
+```
+
+Supports:
+
+* Pagination
+* Date/time filtering
+
+Example:
+
+```http
+GET /api/v1/weight-logs?page=1&limit=20
+```
+
+Date filtering example:
+
+```http
+GET /api/v1/weight-logs?from=2026-09-13T00:00:00%2B05:30&to=2026-09-15T00:00:00%2B05:30
+```
+
+The date/time range uses:
+
+```text
+[from, to)
+```
+
+Weight logs are ordered deterministically by:
+
+```text
+loggedAt DESC
+id DESC
+```
+
+---
+
+## Get Weight Log
+
+```http
+GET /api/v1/weight-logs/:id
+```
+
+Returns a single Weight Log belonging to the authenticated user.
+
+---
+
+## Update Weight Log
+
+```http
+PATCH /api/v1/weight-logs/:id
+```
+
+Supports partial updates.
+
+Example:
+
+```json
+{
+  "weightKg": 77.8
+}
+```
+
+Omitted fields remain unchanged.
+
+---
+
+## Delete Weight Log
+
+```http
+DELETE /api/v1/weight-logs/:id
+```
+
+Deletes a Weight Log belonging to the authenticated user.
+
+Successful deletion returns:
+
+```text
+204 No Content
+```
+
+---
+
 # Validation
 
 Request validation is implemented using **Zod**.
@@ -786,6 +1058,8 @@ Validation covers:
 * Micronutrient codes
 * Duplicate micronutrient codes
 * Source/AI confidence invariants
+* Goal effective-period validation
+* Weight Log validation
 
 Invalid requests return a consistent error structure.
 
@@ -832,6 +1106,17 @@ Example:
 
 Database-specific errors are mapped into appropriate API errors instead of exposing raw database errors to clients.
 
+For example, overlapping Goal periods are returned as:
+
+```json
+{
+  "error": {
+    "code": "CONFLICT",
+    "message": "Goal period overlaps with an existing goal"
+  }
+}
+```
+
 ---
 
 # Pagination
@@ -853,6 +1138,12 @@ Maximum:
 limit = 100
 ```
 
+Pagination is currently implemented for:
+
+* Food Entry listing
+* Goal listing
+* Weight Log listing
+
 Food Entry listing returns:
 
 ```json
@@ -867,6 +1158,8 @@ Food Entry listing returns:
 }
 ```
 
+Goal and Weight Log list endpoints use the same page-based pagination approach.
+
 Food Entry queries use deterministic ordering:
 
 ```text
@@ -875,6 +1168,20 @@ id DESC
 ```
 
 The `id` ordering acts as a tie-breaker when multiple entries have the same consumption timestamp.
+
+Weight Log queries use:
+
+```text
+loggedAt DESC
+id DESC
+```
+
+Goal queries use:
+
+```text
+effectiveFrom DESC
+id DESC
+```
 
 ---
 
@@ -907,7 +1214,19 @@ Relevant Food Entry indexes include:
 (user_id, meal_type, eaten_at DESC)
 ```
 
-These support the application's primary Food Entry history queries.
+Relevant Weight Log index:
+
+```text
+(user_id, logged_at DESC)
+```
+
+Relevant Goal index:
+
+```text
+(user_id, effective_from)
+```
+
+These indexes support the application's primary history and effective-period queries.
 
 ---
 
@@ -1153,14 +1472,14 @@ Current modules include:
 ```text
 modules/
 ├── auth/
-└── food-entry/
+├── food-entry/
+├── goal/
+└── weight-log/
 ```
 
 Future modules are expected to include areas such as:
 
 ```text
-goals/
-weight-log/
 reports/
 ```
 
@@ -1260,25 +1579,39 @@ Implemented:
 
 ## Stage 3 — Goals & Weight Tracking
 
-**Status: Planned**
+**Status: Completed**
 
-Planned:
+Implemented:
 
-* Goal APIs
-* Create/update/delete goals
+* Create Goal
+* List Goals
+* Get Goal
+* Update Goal
+* Delete Goal
+* Goal pagination
 * Effective goal periods
-* Weight Log APIs
-* Weight history
+* Goal period validation
+* Goal overlap protection
+* Create Weight Log
+* List Weight Logs
+* Get Weight Log
+* Update Weight Log
+* Delete Weight Log
+* Weight Log pagination
+* Weight Log date/time filtering
+* User ownership enforcement
+* Validation
+* Consistent application errors
 
 ---
 
 ## Stage 4 — Reports & Analytics
 
-**Status: Planned**
+**Status: Next**
 
 Planned:
 
-* Weekly calorie trends
+* Weekly calorie intake trends
 * Daily/weekly macro breakdown
 * Micronutrient summaries
 * Goal vs actual comparisons
@@ -1352,6 +1685,8 @@ The following decisions are intentional MVP design choices:
 * Food timestamps represent actual instants.
 * Date filtering is interpreted using the user's timezone.
 * Historical Food Entry nutrition is stored as a snapshot and is not dependent on a mutable food catalog.
+* Goal periods are represented using half-open intervals.
+* Goal periods belonging to the same user cannot overlap.
 * User-owned resources are always scoped by the authenticated user's ID.
 * Additional database entities for AI or PDF import workflows will be introduced when those features are actually implemented.
 * The backend is designed to remain usable independently of the future frontend.
