@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+const isValidTimeZone = (timezone) => {
+  try {
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const registerSchema = z
   .object({
     email: z.string().email(),
@@ -9,8 +21,12 @@ export const registerSchema = z
       .min(8),
 
     timezone: z
-      .string()
-      .min(1)
+    .string()
+    .trim()
+    .min(1)
+    .refine(isValidTimeZone, {
+        message: "Invalid IANA timezone"
+    }),
   })
   .strict();
 

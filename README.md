@@ -1,57 +1,108 @@
 # Personal Calorie Tracker
 
-A full-stack personal calorie tracking application for recording food intake, setting nutritional goals, and analyzing daily and weekly nutrition.
+A full-stack personal calorie tracking application for recording food intake, setting nutritional goals, tracking weight, and analyzing nutrition over time.
 
-The project is being developed as part of a Software Engineer interview assignment, with a focus on clean architecture, API-driven development, data integrity, validation, and extensibility.
-
-## Project Status
-
-**Current stage: Database & Backend Foundation**
-
-The PostgreSQL database schema, Prisma migrations, backend foundation, authentication foundation, and protected Food Entry API skeleton are currently implemented.
+This project is being developed as part of a **Software Engineer interview assignment**, with a focus on clean architecture, API-driven development, data integrity, validation, authentication, and extensibility.
 
 The project is being developed incrementally, with each major stage kept in a working state before moving to the next feature.
 
 ---
 
-## Features
+# Project Status
 
-### Planned Core Features
+**Current stage: Stage 2 — Complete Food Entry API**
 
+The following are currently implemented:
+
+* PostgreSQL database
+* Docker Compose development environment
+* Prisma ORM and migrations
+* Database constraints and indexes
+* Environment configuration and validation
+* Centralized error handling
+* Request validation using Zod
 * User registration and login
-* Daily calorie target
-* Protein, carbohydrate, and fat targets
-* Weight goal
-* Food entry creation and management
-* Meal-type categorization:
+* JWT authentication
+* Argon2id password hashing
+* Protected, user-owned Food Entry API
+* Complete Food Entry CRUD
+* Food Entry pagination
+* Date-range filtering
+* Meal-type filtering
+* Micronutrient support
+* Timezone-aware date filtering
+* Response mapping/DTO layer
+* Canonical nutrient seed data
 
-  * Breakfast
-  * Lunch
-  * Dinner
-  * Snacks
-* Food entries with:
+The frontend, goals, weight tracking, reports, and AI nutrition extraction will be implemented in later stages.
 
-  * Food name
-  * Quantity
-  * Calories
-  * Protein
-  * Carbohydrates
-  * Fat
-  * Micronutrients
-* Date and time based food-entry filtering
+---
+
+# Assignment Requirements
+
+The application is intended to support:
+
+### Goal Setting
+
+Users should be able to define:
+
+* Daily calorie targets
+* Protein targets
+* Carbohydrate targets
+* Fat targets
+* Weight goals
+
+### Meal Tracking
+
+Users should be able to record consumed food with:
+
+* Food name
+* Quantity
+* Calories
+* Protein
+* Carbohydrates
+* Fat
+* Micronutrients
+* Meal type
+* Time consumed
+
+Food entries should be filterable by date/time range and meal type.
+
+### Reports & Analytics
+
+The application is intended to provide:
+
 * Weekly calorie intake trends
-* Macro breakdown by day/week
+* Daily/weekly macro breakdowns
 * Micronutrient summaries
-* Goal vs actual nutrition comparison
-* AI-based nutrition extraction from food/nutrition-label images
+* Goal vs actual nutrition comparisons
 
-### Planned Bonus Features
+### AI Nutrition Extraction
 
-* Conversational LLM interface for app actions
-* Multi-user private accounts
-* Bulk PDF import of food diaries/nutrition history
+The application is intended to support extracting nutritional information from:
 
-> Multi-user authentication is already being implemented as part of the backend foundation so that user data can remain private as additional features are added.
+* Nutrition-label images
+* Food/plate images
+
+The extracted information can then be used to pre-fill food entries.
+
+### Architecture
+
+The frontend communicates with the backend exclusively through APIs.
+
+All user data is persisted in the database.
+
+### Required Engineering Considerations
+
+The assignment emphasizes:
+
+* Clean code
+* Modular architecture
+* Validation
+* Error handling
+* Pagination for list APIs
+* Maintainability
+* Clear documentation
 
 ---
 
@@ -60,7 +111,7 @@ The project is being developed incrementally, with each major stage kept in a wo
 ## Backend
 
 * Node.js
-* Express
+* Express 5
 * JavaScript (ES Modules)
 * Zod
 * Prisma ORM
@@ -84,6 +135,60 @@ Frontend implementation will be added in a later stage.
 
 ---
 
+# Architecture
+
+The backend follows a feature-based architecture with a clear separation between HTTP handling, validation, business logic, and persistence.
+
+```text
+Client / Frontend
+       │
+       │ HTTP / REST API
+       ↓
+   Middleware
+       │
+       ↓
+   Controllers
+       │
+       ↓
+    Services
+       │
+       ↓
+     Prisma
+       │
+       ↓
+   PostgreSQL
+```
+
+The frontend does not access the database directly.
+
+## Backend Request Flow
+
+```text
+Request
+  ↓
+Route
+  ↓
+Authentication / Validation Middleware
+  ↓
+Controller
+  ↓
+Service
+  ↓
+Prisma
+  ↓
+PostgreSQL
+```
+
+Controllers are responsible for HTTP-level concerns.
+
+Services contain business logic and enforce application-level invariants.
+
+Prisma is used for database access.
+
+The database acts as an additional integrity boundary through constraints, foreign keys, indexes, and other PostgreSQL features.
+
+---
+
 # Project Structure
 
 ```text
@@ -91,6 +196,7 @@ Personal-Calorie-Tracker/
 │
 ├── backend/
 │   ├── .env
+│   ├── .env.example
 │   ├── .gitignore
 │   ├── package.json
 │   ├── package-lock.json
@@ -98,6 +204,7 @@ Personal-Calorie-Tracker/
 │   │
 │   ├── prisma/
 │   │   ├── schema.prisma
+│   │   ├── seed.js
 │   │   └── migrations/
 │   │       ├── 20260913203619_init/
 │   │       │   └── migration.sql
@@ -130,12 +237,14 @@ Personal-Calorie-Tracker/
 │       │   │
 │       │   └── food-entry/
 │       │       ├── food-entry.controller.js
+│       │       ├── food-entry.mapper.js
 │       │       ├── food-entry.routes.js
 │       │       ├── food-entry.schema.js
 │       │       └── food-entry.service.js
 │       │
 │       └── utils/
 │           ├── app-error.js
+│           ├── date.js
 │           ├── password.js
 │           └── prisma-error.js
 │
@@ -148,34 +257,46 @@ Personal-Calorie-Tracker/
 
 # Database Design
 
-The application uses PostgreSQL as its primary database with Prisma as the ORM and migration system.
+The application uses PostgreSQL with Prisma as the ORM and migration system.
 
 The current database contains the following entities:
 
 ```text
 User
+ ├── RefreshTokens
  ├── Goals
  ├── FoodEntries
  │    └── FoodEntryNutrients
  │           └── Nutrient
- ├── WeightLogs
- └── RefreshTokens
+ └── WeightLogs
 ```
+
+Some entities have their database schema implemented before their APIs because the schema is being designed around the complete application requirements.
+
+---
 
 ## Users
 
-Stores application users and authentication-related information.
+The `User` entity stores application users and authentication information.
 
 Important fields include:
 
 * `id`
 * `email`
-* `password_hash`
+* `passwordHash`
 * `timezone`
-* `created_at`
-* `updated_at`
+* `createdAt`
+* `updatedAt`
 
 User IDs use UUIDs.
+
+Email addresses are unique.
+
+The user's timezone is stored as an **IANA timezone identifier**, for example:
+
+```text
+Asia/Kolkata
+```
 
 ---
 
@@ -185,13 +306,17 @@ A `FoodEntry` represents **one individual food item consumed by a user**.
 
 For example, a breakfast containing:
 
-* 3 eggs
-* 2 slices of bread
-* 250 ml milk
+```text
+3 eggs
+2 slices of bread
+250 ml milk
+```
 
-is represented by three Food Entry records.
+is represented as three separate Food Entry records.
 
-Each entry contains:
+There is intentionally no separate `Meal` table for the current MVP.
+
+Each Food Entry contains:
 
 * Food name
 * Meal type
@@ -204,9 +329,10 @@ Each entry contains:
 * Fat
 * Source
 * Optional AI confidence
-* Creation/update timestamps
+* Creation timestamp
+* Update timestamp
 
-Meal types currently supported:
+Supported meal types:
 
 ```text
 BREAKFAST
@@ -215,71 +341,103 @@ DINNER
 SNACK
 ```
 
-There is intentionally no separate `Meal` table at the current stage. Meal type and consumption time are sufficient for the required MVP functionality.
+Supported quantity units:
+
+```text
+GRAM
+MILLILITER
+PIECE
+SERVING
+```
+
+Nutrition values stored on a Food Entry represent the nutrition for the **consumed quantity**, rather than a reusable per-100g food definition.
 
 ---
 
-## Micronutrients
+# Micronutrients
 
 Micronutrients use a normalized relational design.
 
-The `nutrients` table stores canonical nutrient definitions:
+A canonical `Nutrient` table stores nutrient definitions:
 
 ```text
-id | code       | name       | unit | category
----|------------|------------|------|---------
-1  | iron       | Iron       | mg   | MINERAL
-2  | calcium    | Calcium    | mg   | MINERAL
-3  | vitamin_c  | Vitamin C  | mg   | VITAMIN
+Nutrient
+---------
+id
+code
+name
+unit
+category
 ```
 
-Food entries reference nutrients through `food_entry_nutrients`.
+Food entries reference these definitions through:
 
-This allows the database to maintain a consistent definition of each nutrient and its unit.
+```text
+FoodEntry
+    │
+    └── FoodEntryNutrient
+              │
+              └── Nutrient
+```
 
-The API accepts nutrient codes rather than database IDs.
+The API accepts nutrient **codes** rather than database IDs.
 
-Example:
+For example:
 
 ```json
 {
   "micronutrients": [
     {
-      "code": "iron",
-      "amount": 2.1
+      "code": "IRON",
+      "amount": 5
     },
     {
-      "code": "vitamin_b12",
-      "amount": 1.5
+      "code": "CALCIUM",
+      "amount": 100
     }
   ]
 }
 ```
 
-The backend resolves the nutrient definition and stores the corresponding relationship.
+The backend resolves the nutrient codes against the canonical `Nutrient` table.
 
-A missing micronutrient record means that the nutrient value is unknown/not recorded rather than automatically assuming zero.
+The current seed data includes commonly required vitamins and minerals such as:
 
----
+* Vitamin A
+* Vitamin C
+* Vitamin D
+* Vitamin E
+* Vitamin K
+* Calcium
+* Iron
+* Magnesium
+* Phosphorus
+* Potassium
+* Zinc
 
-## Goals
-
-Goals support:
-
-* Daily calorie targets
-* Protein targets
-* Carbohydrate targets
-* Fat targets
-* Optional weight goals
-* Effective time periods
-
-Database constraints prevent overlapping goal periods for the same user.
-
-The Goals API is planned for a later implementation stage.
+A missing micronutrient record means the nutrient value is **unknown/not recorded**, rather than automatically assuming zero.
 
 ---
 
-## Weight Logs
+# Goals
+
+The database supports goals containing:
+
+* Daily calorie target
+* Protein target
+* Carbohydrate target
+* Fat target
+* Optional weight goal
+* Effective start time
+* Optional effective end time
+
+The database prevents overlapping goal periods for the same user.
+
+The Goals API will be implemented in a later stage.
+
+---
+
+# Weight Logs
 
 Weight logs store a user's weight measurements over time.
 
@@ -288,18 +446,19 @@ Each record contains:
 * User
 * Weight in kilograms
 * Logged timestamp
+* Creation timestamp
 
 The database enforces positive weight values.
 
-The Weight Log API is planned for a later implementation stage.
+The Weight Log API will be implemented in a later stage.
 
 ---
 
-## Refresh Tokens
+# Refresh Tokens
 
-Authentication uses refresh tokens to support persistent user sessions.
+The database contains a refresh-token model for persistent authentication sessions.
 
-Refresh tokens are stored as hashes rather than plaintext tokens.
+Refresh tokens are stored as **hashes rather than plaintext tokens**.
 
 Each record contains:
 
@@ -310,52 +469,71 @@ Each record contains:
 * Creation time
 * Revocation time
 
+The current authentication API implements registration, login, and access-token authentication. Refresh-token rotation and logout will be implemented in a later authentication stage.
+
 ---
 
-# Database Integrity
+# Authentication & Authorization
 
-The database contains constraints and indexes to enforce data integrity and improve common query patterns.
+Authentication is implemented using JWT access tokens.
 
-Examples include:
-
-* Positive food quantities
-* Non-negative calorie values
-* Non-negative macro values
-* Valid AI confidence range
-* Positive weight values
-* Valid goal targets
-* Non-overlapping goal periods per user
-* Foreign-key relationships
-* Cascading deletion of user-owned data where appropriate
-* Restricted deletion of canonical nutrients
-* Unique nutrient codes
-* Unique refresh-token hashes
-
-Important Food Entry indexes include:
+The access token contains the authenticated user's ID as its subject:
 
 ```text
-(user_id, eaten_at DESC)
-
-(user_id, meal_type, eaten_at DESC)
+sub = user UUID
 ```
 
-These support the application's primary food-history query patterns.
+Access tokens are intentionally short-lived.
+
+Passwords are hashed using **Argon2id** before being stored.
+
+Protected endpoints require:
+
+```http
+Authorization: Bearer <access-token>
+```
+
+## Authentication vs Authorization
+
+Authentication establishes **who the user is**.
+
+Authorization establishes **which resources that user is allowed to access**.
+
+Food Entry queries are always scoped by both:
+
+```text
+foodEntry.id
+AND
+authenticated user ID
+```
+
+This prevents users from accessing another user's Food Entries.
+
+A resource belonging to another user is treated the same as a nonexistent resource and returns:
+
+```text
+404 RESOURCE_NOT_FOUND
+```
+
+This avoids exposing information about other users' resources.
 
 ---
 
 # Timezone Handling
 
-User timezone is stored as an IANA timezone identifier, for example:
+Food consumption timestamps represent actual instants and are stored using PostgreSQL `TIMESTAMPTZ`.
+
+For example, a timestamp such as:
 
 ```text
-Asia/Kolkata
+2026-09-14T02:30:00.000Z
 ```
 
-Food consumption timestamps are stored as actual instants using PostgreSQL `TIMESTAMPTZ`.
+represents a specific instant in time.
 
-Date-based queries are interpreted using the user's timezone.
+Date-based queries are interpreted using the user's stored IANA timezone.
 
-Date ranges use a half-open interval:
+Date filters use a half-open interval:
 
 ```text
 [from, to)
@@ -364,11 +542,19 @@ Date ranges use a half-open interval:
 For example:
 
 ```text
-from=2026-09-13
-to=2026-09-14
+from=2026-09-14
+to=2026-09-15
 ```
 
-represents the complete local calendar day of September 13 in the user's timezone.
+means:
+
+> Include the complete local calendar day of September 14 in the user's timezone.
+
+The lower boundary is inclusive and the upper boundary is exclusive.
+
+This avoids ambiguous end-of-day timestamps and handles timezone conversions cleanly.
+
+Historical timestamps are not rewritten if the user later changes their timezone. The stored timestamp remains the same instant; future date-based queries are interpreted using the user's current timezone.
 
 ---
 
@@ -382,113 +568,106 @@ The backend exposes versioned REST APIs under:
 
 The frontend will communicate with the backend exclusively through these APIs.
 
-## Authentication
+---
 
-Current authentication endpoints:
+## Authentication API
+
+### Register
 
 ```http
 POST /api/v1/auth/register
-POST /api/v1/auth/login
 ```
 
-Authentication uses:
+Creates a user account and returns an access token.
 
-* JWT access tokens
-* Short-lived access tokens
-* Argon2id password hashing
+Required fields:
 
-Protected APIs require:
-
-```http
-Authorization: Bearer <access-token>
+```json
+{
+  "email": "user@example.com",
+  "password": "Password123!",
+  "timezone": "Asia/Kolkata"
+}
 ```
+
+The timezone must be a valid IANA timezone.
 
 ---
 
-## Food Entries
+### Login
 
-Current Food Entry endpoint:
+```http
+POST /api/v1/auth/login
+```
+
+Authenticates a user and returns an access token.
+
+---
+
+# Food Entry API
+
+All Food Entry endpoints are protected by authentication.
+
+## Create
 
 ```http
 POST /api/v1/food-entries
 ```
 
-The complete CRUD API is planned as:
+Creates a Food Entry.
+
+Example:
+
+```json
+{
+  "foodName": "Boiled Eggs",
+  "mealType": "BREAKFAST",
+  "eatenAt": "2026-09-14T08:00:00+05:30",
+  "quantity": 4,
+  "quantityUnit": "PIECE",
+  "calories": 250,
+  "proteinG": 18.9,
+  "carbsG": 1.8,
+  "fatG": 15.9,
+  "source": "MANUAL",
+  "micronutrients": [
+    {
+      "code": "IRON",
+      "amount": 5
+    }
+  ]
+}
+```
+
+Food Entry request bodies are validated using Zod before reaching the service layer.
+
+---
+
+## List
 
 ```http
-POST   /api/v1/food-entries
-GET    /api/v1/food-entries
-GET    /api/v1/food-entries/:id
-PATCH  /api/v1/food-entries/:id
-DELETE /api/v1/food-entries/:id
+GET /api/v1/food-entries
 ```
 
-Food Entry endpoints are authenticated and user-owned resources are isolated by the authenticated user's ID.
+Supports:
 
----
+* Pagination
+* Date filtering
+* Meal-type filtering
 
-# API Validation
+Example:
 
-Request bodies are validated using Zod.
-
-Validation includes:
-
-* Required fields
-* Data types
-* Enum values
-* Numeric ranges
-* Timestamp formats
-* Strict request-field validation
-* Micronutrient validation
-
-Invalid requests return a consistent error structure:
-
-```json
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid request data",
-    "details": {}
-  }
-}
+```http
+GET /api/v1/food-entries?page=1&limit=20&from=2026-09-14&to=2026-09-15&mealType=BREAKFAST
 ```
 
----
-
-# Error Handling
-
-The backend uses a centralized error-handling middleware.
-
-Standard error codes include:
+The date range uses:
 
 ```text
-VALIDATION_ERROR
-UNAUTHENTICATED
-RESOURCE_NOT_FOUND
-CONFLICT
-INTERNAL_SERVER_ERROR
+[from, to)
 ```
 
-Errors are returned using a consistent structure:
-
-```json
-{
-  "error": {
-    "code": "UNAUTHENTICATED",
-    "message": "Authentication required"
-  }
-}
-```
-
-Database-specific errors are mapped to appropriate API errors instead of exposing raw database errors to clients.
-
----
-
-# Pagination
-
-List APIs will use page-based pagination.
-
-Default values:
+The default pagination values are:
 
 ```text
 page  = 1
@@ -501,7 +680,288 @@ Maximum page size:
 100
 ```
 
-Pagination will be applied to all list APIs as required by the assignment.
+Example response:
+
+```json
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "totalItems": 0,
+    "totalPages": 0
+  }
+}
+```
+
+---
+
+## Get Food Entry
+
+```http
+GET /api/v1/food-entries/:id
+```
+
+Returns a single Food Entry belonging to the authenticated user.
+
+---
+
+## Update Food Entry
+
+```http
+PATCH /api/v1/food-entries/:id
+```
+
+Supports partial updates.
+
+Fields that are omitted remain unchanged.
+
+Micronutrients have a deliberate replacement semantic:
+
+* If `micronutrients` is omitted, the existing micronutrients remain unchanged.
+* If `micronutrients` is provided, it replaces the entire existing micronutrient set.
+
+The service validates the final state of related fields such as:
+
+```text
+source
+aiConfidence
+```
+
+This prevents invalid states during partial updates.
+
+For example:
+
+```text
+source = MANUAL
+aiConfidence = 0.8
+```
+
+is invalid.
+
+An AI-generated entry can instead contain:
+
+```text
+source = AI_IMAGE
+aiConfidence = 0.8
+```
+
+---
+
+## Delete Food Entry
+
+```http
+DELETE /api/v1/food-entries/:id
+```
+
+Deletes a Food Entry belonging to the authenticated user.
+
+Successful deletion returns:
+
+```text
+204 No Content
+```
+
+Associated `FoodEntryNutrient` records are removed through the database's cascading foreign-key relationship.
+
+---
+
+# Validation
+
+Request validation is implemented using **Zod**.
+
+Validation covers:
+
+* Required fields
+* Data types
+* Enum values
+* Numeric ranges
+* UUIDs
+* Timestamp formats
+* IANA timezones
+* Strict request-field validation
+* Pagination parameters
+* Date ranges
+* Meal types
+* Micronutrient codes
+* Duplicate micronutrient codes
+* Source/AI confidence invariants
+
+Invalid requests return a consistent error structure.
+
+Example:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request data",
+    "details": {}
+  }
+}
+```
+
+Validation is performed at the API boundary, while important business invariants are also enforced in the service layer and database where appropriate.
+
+---
+
+# Error Handling
+
+The backend uses a centralized error-handling middleware and a shared `AppError` abstraction.
+
+Standard error codes include:
+
+```text
+VALIDATION_ERROR
+UNAUTHENTICATED
+RESOURCE_NOT_FOUND
+CONFLICT
+INTERNAL_SERVER_ERROR
+```
+
+Example:
+
+```json
+{
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "Food entry not found"
+  }
+}
+```
+
+Database-specific errors are mapped into appropriate API errors instead of exposing raw database errors to clients.
+
+---
+
+# Pagination
+
+The assignment requires pagination in all list APIs.
+
+The current implementation uses page-based pagination.
+
+Default:
+
+```text
+page  = 1
+limit = 20
+```
+
+Maximum:
+
+```text
+limit = 100
+```
+
+Food Entry listing returns:
+
+```json
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "totalItems": 0,
+    "totalPages": 0
+  }
+}
+```
+
+Food Entry queries use deterministic ordering:
+
+```text
+eatenAt DESC
+id DESC
+```
+
+The `id` ordering acts as a tie-breaker when multiple entries have the same consumption timestamp.
+
+---
+
+# Database Integrity
+
+The database is treated as an integrity boundary rather than relying exclusively on application validation.
+
+Current constraints include:
+
+* Food quantity must be positive
+* Calories must be non-negative
+* Protein must be non-negative
+* Carbohydrates must be non-negative
+* Fat must be non-negative
+* AI confidence must be between 0 and 1 when present
+* Weight must be positive
+* Goal calorie target must be positive
+* Goal macro targets must be non-negative
+* Weight goal must be positive when present
+* Goal periods cannot overlap for the same user
+* Nutrient codes are unique
+* Refresh-token hashes are unique
+* Foreign-key relationships are enforced
+
+Relevant Food Entry indexes include:
+
+```text
+(user_id, eaten_at DESC)
+
+(user_id, meal_type, eaten_at DESC)
+```
+
+These support the application's primary Food Entry history queries.
+
+---
+
+# Transactions
+
+Operations that modify multiple related database records are performed atomically.
+
+For example, when updating a Food Entry's micronutrients:
+
+```text
+Food Entry update
+       +
+Delete existing nutrient relationships
+       +
+Create new nutrient relationships
+       ↓
+Single transaction
+```
+
+If any operation fails, the transaction is rolled back.
+
+This prevents partially updated Food Entry data.
+
+---
+
+# Environment Configuration
+
+Environment variables are loaded and validated at application startup.
+
+Create:
+
+```text
+backend/.env
+```
+
+using `.env.example` as the template.
+
+Example:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/calorie_tracker?schema=public"
+
+JWT_ACCESS_SECRET="replace-with-a-secret-at-least-32-characters-long"
+JWT_ACCESS_EXPIRES_IN="30m"
+
+FRONTEND_URL="http://localhost:3000"
+
+NODE_ENV="development"
+PORT=5000
+```
+
+The real `.env` file should **never be committed to Git**.
+
+The repository contains `.env.example` with placeholder values.
 
 ---
 
@@ -535,7 +995,7 @@ From the project root:
 docker compose up -d
 ```
 
-This starts PostgreSQL 16 using the configuration in:
+This starts PostgreSQL 16 using:
 
 ```text
 docker-compose.yml
@@ -557,21 +1017,13 @@ Create:
 backend/.env
 ```
 
-Example:
+Copy the values from:
 
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/calorie_tracker?schema=public"
-
-JWT_ACCESS_SECRET="replace-with-a-secret-long-one_preferably"
-JWT_ACCESS_EXPIRES_IN="30m"
-
-FRONTEND_URL="http://localhost:3000"
-
-NODE_ENV="development"
-PORT=5000
+```text
+backend/.env.example
 ```
 
-Do not commit `.env` to Git.
+and provide a real JWT secret.
 
 ---
 
@@ -584,10 +1036,18 @@ npm install
 
 ---
 
-## 5. Apply database migrations
+## 5. Generate Prisma Client
 
 ```bash
-npx prisma migrate dev
+npm run prisma:generate
+```
+
+---
+
+## 6. Apply database migrations
+
+```bash
+npm run prisma:migrate
 ```
 
 To check migration status:
@@ -598,13 +1058,23 @@ npx prisma migrate status
 
 ---
 
-## 6. Start the backend
+## 7. Seed canonical nutrients
+
+```bash
+npm run prisma:seed
+```
+
+This populates the canonical `Nutrient` table with the nutrient definitions required by Food Entry micronutrient operations.
+
+---
+
+## 8. Start the backend
 
 ```bash
 npm run dev
 ```
 
-The backend currently runs on:
+The backend runs on:
 
 ```text
 http://localhost:5000
@@ -612,11 +1082,51 @@ http://localhost:5000
 
 ---
 
+# Available Backend Scripts
+
+From the `backend` directory:
+
+```bash
+npm run dev
+```
+
+Starts the development server with Nodemon.
+
+```bash
+npm start
+```
+
+Starts the backend normally.
+
+```bash
+npm run prisma:generate
+```
+
+Generates the Prisma Client.
+
+```bash
+npm run prisma:migrate
+```
+
+Creates/applies development migrations.
+
+```bash
+npm run prisma:studio
+```
+
+Opens Prisma Studio.
+
+```bash
+npm run prisma:seed
+```
+
+Seeds canonical nutrient definitions.
+
+---
+
 # Development Principles
 
-The project follows several principles during development:
-
-### API-first architecture
+## API-first architecture
 
 The frontend does not access the database directly.
 
@@ -632,18 +1142,26 @@ Backend
 PostgreSQL
 ```
 
-### Feature-based backend organization
+---
 
-Backend code is organized by feature:
+## Feature-based organization
+
+Backend functionality is organized by feature.
+
+Current modules include:
 
 ```text
 modules/
 ├── auth/
-├── food-entry/
-├── goals/
-├── weight-log/
-├── nutrients/
-└── reports/
+└── food-entry/
+```
+
+Future modules are expected to include areas such as:
+
+```text
+goals/
+weight-log/
+reports/
 ```
 
 Each feature can contain its own:
@@ -652,16 +1170,39 @@ Each feature can contain its own:
 * Controllers
 * Services
 * Validation schemas
+* Mappers
 
-### Data ownership
+---
+
+## Data ownership
 
 Authenticated users can only access resources belonging to themselves.
 
-Resource ownership is checked using the authenticated user's ID rather than trusting IDs supplied by the client.
+Resource ownership is enforced using the authenticated user's ID rather than trusting a user ID supplied by the client.
 
-### Database as an integrity boundary
+---
 
-Important business invariants are enforced at the database level where appropriate rather than relying exclusively on application-level validation.
+## Database as an integrity boundary
+
+Important invariants are enforced at the database level where appropriate.
+
+Application-level validation provides friendly API errors, while database constraints provide a second layer of protection against invalid states.
+
+---
+
+## Avoid premature abstractions
+
+The current implementation intentionally avoids introducing entities or abstractions that are not yet required.
+
+For example:
+
+* No separate Food catalog
+* No separate Meal table
+* No speculative AI extraction entity
+* No speculative PDF import entity
+* No repository layer until the application actually benefits from one
+
+Additional abstractions can be introduced when the corresponding features are implemented.
 
 ---
 
@@ -671,23 +1212,31 @@ Important business invariants are enforced at the database level where appropria
 
 **Status: Completed**
 
+Implemented:
+
 * PostgreSQL setup
 * Docker Compose setup
 * Prisma configuration
+* Prisma PostgreSQL adapter
 * Database schema
-* Database migrations
+* Initial migrations
 * Database constraints
 * Database indexes
-* Prisma PostgreSQL adapter
 * Environment configuration
 * Centralized error handling
 * Request validation foundation
 * Authentication foundation
-* Protected Food Entry route
+* JWT access-token authentication
+* Argon2id password hashing
+* Protected API routes
+
+---
 
 ## Stage 2 — Complete Food Entry API
 
-**Status: Next**
+**Status: Completed**
+
+Implemented:
 
 * Create Food Entry
 * List Food Entries
@@ -697,69 +1246,115 @@ Important business invariants are enforced at the database level where appropria
 * Date filtering
 * Meal-type filtering
 * Pagination
-* Response DTO/mapping
-* Complete validation
+* Timezone-aware date filtering
+* Micronutrient relationships
+* Canonical nutrient seed data
+* Response mapping
+* Complete request validation
+* Ownership enforcement
+* Transactional micronutrient updates
+* Source/AI confidence validation
+* Consistent application errors
+
+---
 
 ## Stage 3 — Goals & Weight Tracking
 
-**Planned**
+**Status: Planned**
+
+Planned:
 
 * Goal APIs
-* Goal management
+* Create/update/delete goals
+* Effective goal periods
 * Weight Log APIs
+* Weight history
+
+---
 
 ## Stage 4 — Reports & Analytics
 
-**Planned**
+**Status: Planned**
+
+Planned:
 
 * Weekly calorie trends
 * Daily/weekly macro breakdown
 * Micronutrient summaries
-* Goal vs actual reports
+* Goal vs actual comparisons
+
+---
 
 ## Stage 5 — Frontend
 
-**Planned**
+**Status: Planned**
+
+Planned:
 
 * Authentication UI
 * Food entry interface
 * Dashboard
-* Reports/graphs
+* Reports and graphs
 * Goal management
 * Weight tracking
 
+The frontend will communicate exclusively with the backend APIs.
+
+---
+
 ## Stage 6 — AI Nutrition Extraction
 
-**Planned**
+**Status: Planned**
 
-* Food/nutrition-label image upload
+Planned:
+
+* Food/plate image upload
+* Nutrition-label image upload
 * AI image analysis
 * Nutrition extraction
 * Pre-filled Food Entry data
-* Confidence handling
+* AI confidence handling
+
+The current `FoodEntrySource` model already supports:
+
+```text
+MANUAL
+AI_IMAGE
+```
+
+so AI-generated entries can be distinguished from manually entered entries without changing the fundamental Food Entry model.
+
+---
 
 ## Stage 7 — Bonus Features
 
-**Planned**
+**Status: Planned**
+
+Potential bonus features:
 
 * Conversational LLM interface
-* Bulk PDF import
+* Bulk PDF import of food diaries/nutrition history
 
 ---
 
 # Project Assumptions
 
-Some design decisions have intentionally been kept simple for the MVP:
+The following decisions are intentional MVP design choices:
 
 * A Food Entry represents one consumed food item.
-* There is no separate Food catalog in the current MVP.
-* There is no separate Meal table; meal type is stored directly on Food Entry.
-* Nutrition values stored on a Food Entry represent the nutrition for the consumed quantity.
+* There is no separate Food catalog.
+* There is no separate Meal table.
+* Meal type is stored directly on Food Entry.
+* Nutrition values represent the nutrition for the consumed quantity.
 * Micronutrients are stored relationally.
-* Food consumption timestamps represent actual instants.
+* The API uses canonical nutrient codes rather than database IDs.
+* Missing micronutrient records represent unknown/not-recorded values rather than zero.
+* Food timestamps represent actual instants.
 * Date filtering is interpreted using the user's timezone.
 * Historical Food Entry nutrition is stored as a snapshot and is not dependent on a mutable food catalog.
-* Additional database entities for future AI/PDF import workflows will be introduced when those features are actually implemented rather than prematurely adding unused schema.
+* User-owned resources are always scoped by the authenticated user's ID.
+* Additional database entities for AI or PDF import workflows will be introduced when those features are actually implemented.
+* The backend is designed to remain usable independently of the future frontend.
 
 ---
 
