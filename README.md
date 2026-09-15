@@ -8,6 +8,89 @@ The application is developed incrementally, with each major stage kept in a work
 
 ---
 
+## Table of Contents
+- [Getting Started](#getting-started)
+- [Project Status](#project-status)
+- [Assignment Requirements](#assignment-requirements)
+  - [Goal Setting](#goal-setting)
+  - [Meal Tracking](#meal-tracking)
+  - [Reports & Analytics](#reports--analytics)
+  - [AI Nutrition Extraction](#ai-nutrition-extraction)
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [API Endpoints](#api-endpoints)
+- [Related Links](#related-links)
+
+---
+
+# Getting Started
+
+Follow these steps to set up the project locally for development and testing.
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18+)
+- [Docker Desktop](https://www.docker.com/) (to run the PostgreSQL database)
+- [Git](https://git-scm.com/)
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/Saitej2456/Personal-Calorie-Tracker.git
+cd Personal-Calorie-Tracker
+```
+
+### 2. Start the Database
+Use Docker Compose to spin up the local PostgreSQL database:
+```bash
+docker-compose up -d
+```
+*The database will run on port `5432`.*
+
+### 3. Set up the Backend
+```bash
+cd backend
+
+# Install dependencies
+npm install
+
+# Set up your environment variables
+cp .env.example .env
+```
+
+Ensure your `.env` file looks something like this (you must provide your own Gemini API key if you want to use the AI features):
+```env
+PORT=5000
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/calorie_tracker?schema=public"
+JWT_ACCESS_SECRET="your-super-long-random-secret-at-least-32-characters"
+JWT_ACCESS_EXPIRES_IN="30m"
+JWT_REFRESH_SECRET="your-super-super-duper-long-very-random-secret"
+JWT_REFRESH_EXPIRES_IN="7d"
+FRONTEND_URL="http://localhost:5173"
+GEMINI_API_KEY="your-gemini-api-key"
+```
+
+Push the database schema and start the development server:
+```bash
+npx prisma db push
+npm run dev
+```
+
+### 4. Set up the Frontend
+Open a **new terminal tab/window**:
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the frontend development server
+npm run dev
+```
+
+### 5. Start Testing!
+Open your browser and navigate to `http://localhost:5173`. You can create an account and immediately start using the application.
+
+---
+
 # Project Status
 
 **Current stage: Stage 7 — Advanced Features (Completed)**
@@ -95,9 +178,6 @@ All core features, including AI-powered nutrition extraction, a Conversational A
 - **Conversational LLM Widget (Floating chat interface to log food and ask questions)**
 - **Bulk CSV Import Modal (Client-side PapaParse validation & review before saving)**
 
-## Remaining
-
-- Final UI polish and refinement
 
 ---
 
@@ -177,11 +257,11 @@ The existing FoodEntry model supports the `source` and `aiConfidence` fields nat
 
 ---
 
-## Architecture
+# Architecture
 
 The frontend communicates with the backend exclusively through REST APIs. The frontend does not access the database directly. All user data is persisted in PostgreSQL.
 
-### Backend request lifecycle
+## Backend Request Lifecycle
 
 ```text
 Route → Middleware (Auth / Validation) → Controller → Service → Prisma → PostgreSQL
@@ -189,7 +269,7 @@ Route → Middleware (Auth / Validation) → Controller → Service → Prisma �
 
 There is intentionally no repository layer. Abstractions are introduced only when justified by actual requirements.
 
-### Data design decisions
+## Data Design Decisions
 
 - No separate Meal table — a FoodEntry represents one individual food item
 - No Food catalog — nutrition values are stored per entry for the actual consumed quantity
@@ -198,6 +278,49 @@ There is intentionally no repository layer. Abstractions are introduced only whe
 - Goal periods use half-open intervals `[effectiveFrom, effectiveTo)` enforced at the database level
 - Timestamps are stored as `TIMESTAMPTZ` (instants); date filters are interpreted in the user's IANA timezone
 - Micronutrient absence means unknown/not-recorded, not zero
+
+## Architecture Diagram
+
+```text
+                    ┌──────────────────────┐
+                    │      React UI        │
+                    │      Frontend        │
+                    └──────────┬───────────┘
+                               │
+                               │ HTTP / REST API
+                               ↓
+                    ┌──────────────────────┐
+                    │       Express        │
+                    │       Routes         │
+                    └──────────┬───────────┘
+                               │
+                               ↓
+                    ┌──────────────────────┐
+                    │     Middleware       │
+                    │ Auth / Validation    │
+                    └──────────┬───────────┘
+                               │
+                               ↓
+                    ┌──────────────────────┐
+                    │     Controllers      │
+                    └──────────┬───────────┘
+                               │
+                               ↓
+                    ┌──────────────────────┐
+                    │      Services        │
+                    │   Business Logic     │
+                    └──────────┬───────────┘
+                               │
+                               ↓
+                    ┌──────────────────────┐
+                    │       Prisma         │
+                    └──────────┬───────────┘
+                               │
+                               ↓
+                    ┌──────────────────────┐
+                    │     PostgreSQL       │
+                    └──────────────────────┘
+```
 
 ---
 
@@ -307,45 +430,8 @@ There is intentionally no repository layer. Abstractions are introduced only whe
 
 ---
 
-# Architecture Diagram
+# Related Links
 
-```text
-                    ┌──────────────────────┐
-                    │      React UI        │
-                    │      Frontend        │
-                    └──────────┬───────────┘
-                               │
-                               │ HTTP / REST API
-                               ↓
-                    ┌──────────────────────┐
-                    │       Express        │
-                    │       Routes         │
-                    └──────────┬───────────┘
-                               │
-                               ↓
-                    ┌──────────────────────┐
-                    │     Middleware       │
-                    │ Auth / Validation    │
-                    └──────────┬───────────┘
-                               │
-                               ↓
-                    ┌──────────────────────┐
-                    │     Controllers      │
-                    └──────────┬───────────┘
-                               │
-                               ↓
-                    ┌──────────────────────┐
-                    │      Services        │
-                    │   Business Logic     │
-                    └──────────┬───────────┘
-                               │
-                               ↓
-                    ┌──────────────────────┐
-                    │       Prisma         │
-                    └──────────┬───────────┘
-                               │
-                               ↓
-                    ┌──────────────────────┐
-                    │     PostgreSQL       │
-                    └──────────────────────┘
-```
+- [Video Demo Link](https://drive.google.com/drive/folders/1Znyjye2UoSQh9-ms88CmGRIU3kzf9X7b?usp=sharing)
+- [Schema Diagram](https://drive.google.com/drive/folders/19G8sMw68MsGpq272K9kSqDVz7sPfUszW?usp=sharing)
+- [Hosted Link](https://depp-mauve.vercel.app)
