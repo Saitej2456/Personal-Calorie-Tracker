@@ -27,3 +27,35 @@ export const verifyAccessToken = (token) => {
     userId: payload.sub
   };
 };
+
+export const createRefreshToken = (userId, refreshTokenId) => {
+  return jwt.sign(
+    {
+      sub: userId,
+      jti: refreshTokenId
+    },
+    env.JWT_REFRESH_SECRET,
+    {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN
+    }
+  );
+};
+
+export const verifyRefreshToken = (token) => {
+  const payload = jwt.verify(
+    token,
+    env.JWT_REFRESH_SECRET
+  );
+
+  if (
+    typeof payload.sub !== "string" ||
+    typeof payload.jti !== "string"
+  ) {
+    throw new Error("Invalid refresh token");
+  }
+
+  return {
+    userId: payload.sub,
+    refreshTokenId: payload.jti
+  };
+};

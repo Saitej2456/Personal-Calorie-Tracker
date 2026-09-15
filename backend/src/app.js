@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 
+import nutrientRoutes from "./modules/nutrient/nutrient.routes.js";
 import reportRoutes from "./modules/report/report.routes.js";
 import weightLogRoutes from "./modules/weight-log/weight-log.routes.js";
 import goalRoutes from "./modules/goal/goal.routes.js";
@@ -18,11 +20,12 @@ const app = express();
 
 app.use(
   cors({
-    origin: env.FRONTEND_URL
+    origin: env.FRONTEND_URL,
+    credentials: true,
   })
 );
-
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/health", (req, res) => {
   res.json({
@@ -43,22 +46,7 @@ app.use(
 );
 app.use("/api/v1/weight-logs", weightLogRoutes);
 app.use("/api/v1/reports", reportRoutes);
-// app.use("/api/v1/goals", goalRoutes);
-
-// app.use(
-//   "/api/v1/weight-logs",
-//   weightLogRoutes
-// );
-
-// app.use(
-//   "/api/v1/nutrients",
-//   nutrientRoutes
-// );
-
-// app.use(
-//   "/api/v1/reports",
-//   reportRoutes
-// );
+app.use("/api/v1/nutrients", nutrientRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({
