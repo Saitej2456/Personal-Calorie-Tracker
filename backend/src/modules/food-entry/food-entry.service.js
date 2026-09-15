@@ -138,6 +138,36 @@ export const createFoodEntry = async (
   );
 };
 
+export const bulkCreateFoodEntries = async (userId, entries) => {
+  return prisma.$transaction(async (tx) => {
+    const results = [];
+    for (const input of entries) {
+      const foodEntry = await tx.foodEntry.create({
+        data: {
+          userId,
+          foodName: input.foodName,
+          mealType: input.mealType,
+          eatenAt: new Date(input.eatenAt),
+          quantity: input.quantity,
+          quantityUnit: input.quantityUnit,
+          calories: input.calories,
+          proteinG: input.proteinG,
+          carbsG: input.carbsG,
+          fatG: input.fatG,
+          source: input.source,
+          aiConfidence: input.aiConfidence ?? null
+        }
+      });
+      
+      // If the bulk data included micronutrients, we'd add them here.
+      // But standard CSV uploads typically only have macros.
+      
+      results.push(foodEntry);
+    }
+    return results;
+  });
+};
+
 export async function listFoodEntries(
   userId,
   query

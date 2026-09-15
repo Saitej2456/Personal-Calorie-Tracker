@@ -17,3 +17,21 @@ export const extractNutrition = (imageData, mimeType, accessToken) => {
     }
   )
 }
+
+/**
+ * Send a chat message to the AI assistant.
+ *
+ * @param {string} message - The user's message
+ * @param {Array} history - The chat history array
+ * @param {string} accessToken
+ */
+export const chatWithAi = (message, history, accessToken) => {
+  return apiRequest(
+    "/ai/chat",
+    {
+      method: "POST",
+      body: JSON.stringify({ message, history }),
+      accessToken,
+    }
+  )
+}

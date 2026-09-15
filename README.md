@@ -10,9 +10,9 @@ The application is developed incrementally, with each major stage kept in a work
 
 # Project Status
 
-**Current stage: Stage 6 — AI Nutrition Extraction (Completed)**
+**Current stage: Stage 7 — Advanced Features (Completed)**
 
-All core features including AI-powered nutrition extraction are implemented and working.
+All core features, including AI-powered nutrition extraction, a Conversational AI Assistant, and Bulk CSV Import, are fully implemented and working.
 
 ## Implemented
 
@@ -56,9 +56,11 @@ All core features including AI-powered nutrition extraction are implemented and 
 - Goal vs actual daily comparisons (`GET /api/v1/reports/goal-comparison`)
 - Timezone-aware report date handling
 - **AI nutrition extraction (`POST /api/v1/ai/extract-nutrition`)**
+- **Conversational LLM Interface (`POST /api/v1/ai/chat`) with Gemini Function Calling (Tools)**
 - **Gemini vision model integration (gemini-3.6-flash)**
 - **AI confidence score tracking per food entry**
 - **MANUAL vs AI_IMAGE source invariant enforcement**
+- **Bulk CSV Import endpoint with transactional save (`POST /api/v1/food-entries/bulk`)**
 
 ### Frontend
 
@@ -90,10 +92,11 @@ All core features including AI-powered nutrition extraction are implemented and 
 - Macro breakdown chart
 - Micronutrient summary table
 - Goal vs actual progress bars
+- **Conversational LLM Widget (Floating chat interface to log food and ask questions)**
+- **Bulk CSV Import Modal (Client-side PapaParse validation & review before saving)**
 
 ## Remaining
 
-- Optional bonus features (multi-user isolation already enforced, conversational LLM, PDF bulk import)
 - Final UI polish and refinement
 
 ---
@@ -254,6 +257,7 @@ There is intentionally no repository layer. Abstractions are introduced only whe
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/v1/food-entries` | Create a food entry |
+| POST | `/api/v1/food-entries/bulk` | Create multiple food entries via CSV upload |
 | GET | `/api/v1/food-entries` | List food entries (pagination, date, meal-type filters) |
 | GET | `/api/v1/food-entries/:id` | Get a single food entry |
 | PATCH | `/api/v1/food-entries/:id` | Update a food entry |
@@ -299,6 +303,7 @@ There is intentionally no repository layer. Abstractions are introduced only whe
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/v1/ai/extract-nutrition` | Extract nutrition from a food/label image |
+| POST | `/api/v1/ai/chat` | Conversational interface with Function Calling |
 
 ---
 

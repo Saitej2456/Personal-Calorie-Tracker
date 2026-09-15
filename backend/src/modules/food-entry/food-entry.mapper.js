@@ -22,12 +22,12 @@ export function mapFoodEntry(foodEntry) {
     createdAt: foodEntry.createdAt,
     updatedAt: foodEntry.updatedAt,
 
-    micronutrients: foodEntry.micronutrients.map((item) => ({
-      code: item.nutrient.code,
-      name: item.nutrient.name,
-      unit: item.nutrient.unit,
-      category: item.nutrient.category,
-      amount: item.amount.toString()
+    micronutrients: (foodEntry.micronutrients || []).map((item) => ({
+      code: item.nutrient?.code,
+      name: item.nutrient?.name,
+      unit: item.nutrient?.unit,
+      category: item.nutrient?.category,
+      amount: item.amount?.toString()
     }))
   };
 }

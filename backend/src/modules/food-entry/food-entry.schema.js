@@ -222,3 +222,5 @@ export const updateFoodEntrySchema = z
       seenCodes.add(nutrient.code);
     });
   });
+
+export const bulkCreateFoodEntriesSchema = z.array(createFoodEntrySchema).min(1).max(500);

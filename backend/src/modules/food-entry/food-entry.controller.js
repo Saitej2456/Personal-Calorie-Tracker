@@ -33,6 +33,21 @@ export const create = async (
   }
 };
 
+export const bulkCreate = async (req, res, next) => {
+  try {
+    const foodEntries = await foodEntryService.bulkCreateFoodEntries(
+      req.user.id,
+      req.body
+    );
+
+    res.status(201).json({
+      data: foodEntries.map(mapFoodEntry)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export async function list(req, res) {
   const result =
     await foodEntryService.listFoodEntries(

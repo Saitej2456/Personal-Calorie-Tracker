@@ -2,6 +2,7 @@ import {
   createContext,
   useEffect,
   useState,
+  useContext
 } from "react"
 
 import * as authApi from "../../api/auth.api"
@@ -71,4 +72,12 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   )
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
 }

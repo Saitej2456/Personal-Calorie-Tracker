@@ -19,3 +19,19 @@ export const extractNutritionSchema = z
     ])
   })
   .strict();
+
+export const chatRequestSchema = z
+  .object({
+    message: z.string().trim().min(1).max(500),
+    history: z.array(
+      z.object({
+        role: z.enum(["user", "model"]),
+        parts: z.array(
+          z.object({
+            text: z.string()
+          })
+        )
+      })
+    ).optional().default([])
+  })
+  .strict();

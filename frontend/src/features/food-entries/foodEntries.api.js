@@ -88,3 +88,17 @@ export const getFoodEntry = (
     }
   )
 }
+
+export const bulkCreateFoodEntries = (
+  data,
+  accessToken
+) => {
+  return apiRequest(
+    "/food-entries/bulk",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+      accessToken,
+    }
+  )
+}

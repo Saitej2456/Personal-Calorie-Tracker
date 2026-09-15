@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom"
 
 import Sidebar from "./Sidebar"
 import MobileNav from "./MobileNav"
+import { AiChatWidget } from "../../features/ai/AiChatWidget"
 
 export default function AppShell() {
   return (
@@ -14,6 +15,8 @@ export default function AppShell() {
           <Outlet />
         </div>
       </main>
+
+      <AiChatWidget />
     </div>
   )
 }

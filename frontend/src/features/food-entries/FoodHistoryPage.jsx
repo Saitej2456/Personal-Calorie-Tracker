@@ -16,6 +16,8 @@ import {
 
 
 import { useAuth } from "../auth/useAuth"
+import { CsvImportModal } from "./CsvImportModal"
+import { UploadCloud } from "lucide-react"
 
 const MEAL_TYPES = [
   "BREAKFAST",
@@ -42,6 +44,7 @@ export default function FoodHistoryPage() {
   const [mealType, setMealType] = useState("")
 
   const [page, setPage] = useState(1)
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false)
 
   const [isLoading, setIsLoading] =
     useState(true)
@@ -163,13 +166,24 @@ export default function FoodHistoryPage() {
           </p>
         </div>
 
-        <Link
-          to="/food/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-        >
-          <Plus className="size-4" />
-          Add Food
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsCsvModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900"
+          >
+            <UploadCloud className="size-4" />
+            Import CSV
+          </button>
+          
+          <Link
+            to="/food/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Plus className="size-4" />
+            Add Food
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -409,6 +423,21 @@ export default function FoodHistoryPage() {
             </div>
           </div>
         )}
+
+      <CsvImportModal
+        isOpen={isCsvModalOpen}
+        onClose={() => setIsCsvModalOpen(false)}
+        onImportSuccess={(count) => {
+          setPage(1)
+          setIsCsvModalOpen(false)
+          // The page will automatically reload via useEffect dependency on 'page'
+          if (page === 1) {
+            setFrom("")
+            setTo("")
+            setMealType("")
+          }
+        }}
+      />
     </div>
   )
 }

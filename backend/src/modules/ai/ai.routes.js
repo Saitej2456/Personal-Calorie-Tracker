@@ -2,8 +2,8 @@ import { Router } from "express";
 
 import { requireAuth } from "../../middleware/auth.middleware.js";
 import { validateBody } from "../../middleware/validate.middleware.js";
-import { extractNutritionSchema } from "./ai.schema.js";
-import { extractNutritionController } from "./ai.controller.js";
+import { extractNutritionSchema, chatRequestSchema } from "./ai.schema.js";
+import { extractNutritionController, chatController } from "./ai.controller.js";
 
 const router = Router();
 
@@ -17,6 +17,12 @@ router.post(
   "/extract-nutrition",
   validateBody(extractNutritionSchema),
   extractNutritionController
+);
+
+router.post(
+  "/chat",
+  validateBody(chatRequestSchema),
+  chatController
 );
 
 export default router;

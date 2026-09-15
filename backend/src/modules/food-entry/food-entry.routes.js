@@ -17,7 +17,8 @@ import {
   createFoodEntrySchema,
   foodEntryIdSchema,
   listFoodEntriesSchema,
-  updateFoodEntrySchema
+  updateFoodEntrySchema,
+  bulkCreateFoodEntriesSchema
 } from "./food-entry.schema.js";
 
 const router = Router();
@@ -28,6 +29,12 @@ router.post(
   "/",
   validateBody(createFoodEntrySchema),
   controller.create
+);
+
+router.post(
+  "/bulk",
+  validateBody(bulkCreateFoodEntriesSchema),
+  controller.bulkCreate
 );
 
 router.get(
