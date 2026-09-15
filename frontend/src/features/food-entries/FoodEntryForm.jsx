@@ -231,6 +231,7 @@ export default function FoodEntryForm({
       eatenAt: new Date(values.eatenAt).toISOString(),
       micronutrients,
       source: initialValues?.source ?? "MANUAL",
+      aiConfidence: initialValues?.aiConfidence ?? null,
     })
   }
 

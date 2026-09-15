@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "./useAuth"
 
@@ -99,10 +99,20 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
           {isSubmitting ? "Logging in..." : "Log in"}
         </button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link
+            to="/register"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Register
+          </Link>
+        </p>
       </form>
     </div>
   )

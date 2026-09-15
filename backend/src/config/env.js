@@ -22,7 +22,9 @@ const envSchema = z.object({
 
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 
-  FRONTEND_URL: z.string().url()
+  FRONTEND_URL: z.string().url(),
+
+  GEMINI_API_KEY: z.string().min(1)
 });
 
 export const env = envSchema.parse(process.env);

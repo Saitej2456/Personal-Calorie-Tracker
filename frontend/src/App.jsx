@@ -4,8 +4,11 @@ import {
   Route,
 } from "react-router-dom"
 
+import HomeRedirect from "./features/auth/HomeRedirect"
 import LoginPage from "./features/auth/LoginPage"
+import RegisterPage from "./features/auth/RegisterPage"
 import ProtectedRoute from "./features/auth/ProtectedRoute"
+import PublicOnlyRoute from "./features/auth/PublicOnlyRoute"
 import AppShell from "./components/layout/AppShell"
 import DashboardPage from "./features/dashboard/DashboardPage"
 import FoodHistoryPage from "./features/food-entries/FoodHistoryPage"
@@ -15,41 +18,45 @@ import Goals from "./features/goals/Goals"
 import Weight from "./features/weight/Weight"
 import Reports from "./features/reports/Reports"
 
-function Register() {
-  return <h1>Register</h1>
-}
-
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public routes */}
+        {/* Root: redirect based on auth state */}
         <Route
-          path="/login"
-          element={<LoginPage />}
+          path="/"
+          element={<HomeRedirect />}
         />
 
-        <Route
-          path="/register"
-          element={<Register />}
-        />
+        {/* Public-only routes: redirect to /dashboard if already logged in */}
+        <Route element={<PublicOnlyRoute />}>
+          <Route
+            path="/login"
+            element={<LoginPage />}
+          />
+
+          <Route
+            path="/register"
+            element={<RegisterPage />}
+          />
+        </Route>
 
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route
               path="/dashboard"
-              element={<DashboardPage  />}
+              element={<DashboardPage />}
             />
 
             <Route
               path="/food"
-              element={<FoodHistoryPage  />}
+              element={<FoodHistoryPage />}
             />
 
             <Route
               path="/food/new"
-              element={<FoodEntryCreatePage  />}
+              element={<FoodEntryCreatePage />}
             />
 
             <Route

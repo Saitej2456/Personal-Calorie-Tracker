@@ -11,10 +11,7 @@ import weightLogRoutes from "./modules/weight-log/weight-log.routes.js";
 import goalRoutes from "./modules/goal/goal.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import foodEntryRoutes from "./modules/food-entry/food-entry.routes.js";
-// import goalRoutes from "./modules/goals/goals.routes.js";
-// import weightLogRoutes from "./modules/weight-log/weight-log.routes.js";
-// import nutrientRoutes from "./modules/nutrients/nutrients.routes.js";
-// import reportRoutes from "./modules/reports/reports.routes.js";
+import aiRoutes from "./modules/ai/ai.routes.js";
 
 const app = express();
 
@@ -24,7 +21,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
 app.get("/health", (req, res) => {
@@ -47,6 +44,7 @@ app.use(
 app.use("/api/v1/weight-logs", weightLogRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/nutrients", nutrientRoutes);
+app.use("/api/v1/ai", aiRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({
